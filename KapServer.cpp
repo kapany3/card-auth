@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
+#include <Base64.h>
+
 #include "KapServer.h"
 #include "KapConfig.h"
 #include "KapNetwork.h"
@@ -64,7 +66,6 @@ void KapServer::handleGetConfig() {
   doc["serverPort"] = conf->serverPort;
   doc["serverUrl"] = conf->serverUrl;
   doc["deviceName"] = conf->deviceName;
-  doc["openkey"] = conf->publKey;
 
   if (serializeJson(doc, message) == 0) {
     Serial.println(F("Failed to write to string"));
@@ -97,10 +98,16 @@ void KapServer::handleSetConfig() {
       strlcpy(conf->serverUrl, buf, sizeof(conf->serverUrl));
     } else if (argName == "deviceName") {
       strlcpy(conf->deviceName, buf, sizeof(conf->deviceName));
-    }
-    if (argName == "regenerate" && buf[0] == '1') {
-      Serial.println("Regenerate");
-      _kapObjects->_card->regenerate();
+    } else if (argName == "rfid" && String(buf).length() == 16) {
+      Serial.println("Store rfid key");
+      uint8_t rfidBuf[13];
+      BASE64::decode(buf, rfidBuf);
+      strlcpy(conf->rfidA, (char*)&rfidBuf, 7);
+      strlcpy(conf->rfidB, (char*)&rfidBuf[6], 7);
+      conf->hasRFID = true;
+      Serial.println("Keys set in config");
+      delay(1000);
+      _kapObjects->_card->setRFIDKeys();
     }
   }
   _kapObjects->_config->saveConfig();

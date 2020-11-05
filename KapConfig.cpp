@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <Base64.h>
+
 #include "FS.h"
 #include "KapConfigStruct.h"
 #include "KapConfig.h"
@@ -32,6 +34,8 @@ void KapConfig::loadConfig() {
 
   if (error) {
     Serial.print(F("deserializeJson() failed: "));
+    _configParams.hasRFID = false;
+    return;
   }
 
   Serial.println("Config parsed");
@@ -54,25 +58,24 @@ void KapConfig::loadConfig() {
   strlcpy(_configParams.serverUrl, doc["serverUrl"] | "", sizeof(_configParams.serverUrl));
   Serial.println("Server Url: " + String(_configParams.serverUrl));
   
-  strlcpy(_configParams.privKey, doc["private"] | "", sizeof(_configParams.privKey));
-  // Serial.println("Private key: " + String(_configParams.privKey));
-  
-  strlcpy(_configParams.publKey, doc["public"] | "", sizeof(_configParams.publKey));
-  Serial.println("Public key: " + String(_configParams.publKey));
+  Serial.println("CHECK RFID KEYS");
+  if (doc["rfidA"] != "" && doc["rfidB"] != "") {
+    Serial.println("DECODE RFID KEYS");
+    _configParams.hasRFID = true;
+    BASE64::decode(doc["rfidA"], (uint8_t *)&_configParams.rfidA);
+    delay(1000);
+    Serial.println("NEXT");
+    BASE64::decode(doc["rfidB"], (uint8_t *)&_configParams.rfidB);
+    delay(1000);
+  } else {
+    _configParams.hasRFID = false;
+    Serial.println("No RFID keys available");
+  }
 }
 
 void KapConfig::setSsid(const char* ssid, const char* pass) {
   strlcpy(_configParams.ssidName, ssid, sizeof(_configParams.ssidName));
   strlcpy(_configParams.ssidPass, pass, sizeof(_configParams.ssidPass));
-}
-/*
-void KapConfig::setServer(const char* server) {
-  strlcpy(_configParams.server, server, sizeof(_configParams.server));
-}
-*/
-void KapConfig::setKeys(const char* privateKey, const char* publicKey) {
-  strlcpy(_configParams.privKey, privateKey, sizeof(_configParams.privKey));
-  strlcpy(_configParams.publKey, publicKey, sizeof(_configParams.publKey));
 }
 
 bool KapConfig::saveConfig() {
@@ -91,9 +94,32 @@ bool KapConfig::saveConfig() {
   doc["serverPort"] = _configParams.serverPort;
   doc["serverUrl"] = _configParams.serverUrl;
   doc["deviceName"] = _configParams.deviceName;
-  doc["private"] = _configParams.privKey;
-  doc["public"] = _configParams.publKey;
 
+  if (_configParams.hasRFID) {
+    char bufA[9];
+    memset(bufA, 0, 9);
+    BASE64::encode((uint8_t*)&_configParams.rfidA, 6, bufA);
+    /*
+    Serial.print("keyA: ");
+    Serial.println(bufA);
+    */
+    doc["rfidA"] = bufA;
+
+  
+    char bufB[9];
+    memset(bufB, 0, 9);
+    BASE64::encode((uint8_t*)&_configParams.rfidB, 6, bufB);
+    /*
+    Serial.print("keyB: ");
+    Serial.println(bufB);
+    */
+    doc["rfidB"] = bufB;
+  
+  } else {
+    doc["rfidA"] = "";
+    doc["rfidB"] = "";
+  }
+  
   if (serializeJson(doc, configFile) == 0) {
     Serial.println(F("Failed to write to file"));
   } else {

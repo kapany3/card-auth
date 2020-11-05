@@ -34,6 +34,10 @@ KapNetwork::KapNetwork(int port, KapObjects* kapObjects) {
   if (conf->ssidName[0] == 0) {
     Serial.println("No WiFi connection information available.");
     startAP();
+  } else if (!conf->hasRFID) {
+    Serial.println("No RFID keys available");
+    delay(1000);
+    startAP();
   } else {
     Serial.println("ssidName exists");
     Serial.println(conf->ssidName);
