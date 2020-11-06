@@ -15,7 +15,6 @@ KapConfig::KapConfig() {
 
   loadConfig();
   Serial.println("Config created");
-  delay(1000);  
 }
 
 void KapConfig::loadConfig() {
@@ -63,10 +62,8 @@ void KapConfig::loadConfig() {
     Serial.println("DECODE RFID KEYS");
     _configParams.hasRFID = true;
     BASE64::decode(doc["rfidA"], (uint8_t *)&_configParams.rfidA);
-    delay(1000);
     Serial.println("NEXT");
     BASE64::decode(doc["rfidB"], (uint8_t *)&_configParams.rfidB);
-    delay(1000);
   } else {
     _configParams.hasRFID = false;
     Serial.println("No RFID keys available");

@@ -86,7 +86,7 @@ void KapCard::sendSinature(String data) {
 
   String payload;
   if (http.GET() == HTTP_CODE_OK) {
-    Serial.println("Result:");
+    Serial.print("Result: ");
     payload = http.getString();  
     Serial.println(payload);
   } else {
@@ -129,7 +129,7 @@ void KapCard::process() {
 
   if (!readData(_privateKey, 14, &_keyA)) {
     // Не удалось прочитать блоки с секретным ключом
-    // Сбрасываю карту, чтою читать с ключом по умолчанию
+    // Сбрасываю карту, чтоб читать с ключом по умолчанию
     mfrc522.PCD_StopCrypto1();
     mfrc522.PICC_HaltA();
     mfrc522.PCD_Init();
@@ -153,7 +153,7 @@ void KapCard::process() {
       return;
     }
   } else {
-    Serial.println(hexArray("Private: ", _privateKey, KEY_LENGTH));
+    // Serial.println(hexArray("Private: ", _privateKey, KEY_LENGTH));
     if (!readData(_publicKey, 15, &_keyA)) {
       _kapObjects->_led->off();
       mfrc522.PICC_HaltA(); // Stop reading
@@ -192,16 +192,16 @@ void KapCard::process() {
   Serial.print("SIGNATURE: ");
   Serial.println(_signatureEncoded);
 
-  mfrc522.PICC_HaltA();
-  mfrc522.PCD_StopCrypto1();
-
   if (!updateCounter(same)) {
     sendSinature(s);
     _kapObjects->_led->off();
-    Serial.print("Finished ");
+    Serial.print("Finished: ");
     Serial.println(_kapObjects->_network->getLocalTime());
     Serial.println("");
   }
+
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
 }
 
 String KapCard::hexArray(String s, uint8_t* data, size_t len) {
@@ -220,11 +220,9 @@ void KapCard::setRFIDKeys() {
   KapConfigParams* conf = _kapObjects->_config->getConfig();
   if (conf->hasRFID) {
     Serial.println("READ RFID KEY FOR CARD A");
-    delay(1000);
     memcpy((char*)_keyA.keyByte, (char*)conf->rfidA, 6);
     // Serial.println(hexArray("keyA: ", (uint8_t*)conf->rfidA, 6));
     Serial.println("READ RFID KEY FOR CARD B");
-    delay(1000);
     memcpy((char*)_keyB.keyByte, (char*)conf->rfidB, 6);
     // Serial.println(hexArray("keyB: ", (uint8_t*)conf->rfidB, 6));
     _hasRFIDKeys = true;
