@@ -33,6 +33,7 @@ class KapCard
     uint8_t prevCard[4];
     char* _signatureEncoded;
     byte _touchCountr;
+    long int _nocard = 0;
     MFRC522::MIFARE_Key _keyA;
     MFRC522::MIFARE_Key _keyB;
     MFRC522::MIFARE_Key _keyD;

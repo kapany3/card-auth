@@ -99,17 +99,49 @@ void KapCard::sendSinature(String data) {
 
 void KapCard::process() {
   if (!_hasRFIDKeys) {
+    Serial.println("NO RFIR KEYS");
+    delay(500);
     return;
   }
 
   if ( ! mfrc522.PICC_IsNewCardPresent()) {
+    if (_nocard == 0) {
+      Serial.println("START COUNTING NOCARD TIME");
+      _nocard = millis();
+    } else {
+      long int now = millis();
+      if (now < _nocard || now - _nocard > 60000) {
+        _nocard = now;
+        Serial.println("RESET CARDREADER (NOTIME)");
+        mfrc522.PCD_StopCrypto1();
+        mfrc522.PICC_HaltA();
+        mfrc522.PCD_Init();
+        delay(4);
+      }
+    }
     return;
   }
 
   // Select one of the cards
   if ( ! mfrc522.PICC_ReadCardSerial()) {
+    if (_nocard == 0) {
+      Serial.println("START COUNTING NOREAD TIME");
+      _nocard = millis();
+    } else {
+      long int now = millis();
+      if (now < _nocard || now - _nocard > 60000) {
+        _nocard = now;
+        Serial.println("RESET CARDREADER (NOREAD)");
+        mfrc522.PCD_StopCrypto1();
+        mfrc522.PICC_HaltA();
+        mfrc522.PCD_Init();
+        delay(4);
+      }
+    }
     return;
   }
+  
+  _nocard = 0;
 
   // mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
 
@@ -133,12 +165,17 @@ void KapCard::process() {
     mfrc522.PCD_StopCrypto1();
     mfrc522.PICC_HaltA();
     mfrc522.PCD_Init();
-    Serial.println(F("WAIT 2"));
-    if (!mfrc522.PICC_IsNewCardPresent()) {
+    delay(4);
+    int counter = 0;
+    Serial.println(F("WAIT 1"));
+    if (!mfrc522.PICC_IsNewCardPresent() && counter < 20) {
       delay(5);
+      counter += 1;
     }
-    while (!mfrc522.PICC_ReadCardSerial()) {
+    Serial.println(F("WAIT 2"));
+    while (!mfrc522.PICC_ReadCardSerial() && counter < 40) {
       delay(5);
+      counter += 1;
     }
     Serial.println(F("TRY WRITE NEW KEYS"));
     
@@ -147,18 +184,20 @@ void KapCard::process() {
 
     if (!writeKeys()) {
       _kapObjects->_led->off();
-      mfrc522.PICC_HaltA(); // Stop reading
       mfrc522.PCD_StopCrypto1();
+      mfrc522.PICC_HaltA(); // Stop reading
       mfrc522.PCD_Init();
+      delay(4);
       return;
     }
   } else {
     // Serial.println(hexArray("Private: ", _privateKey, KEY_LENGTH));
     if (!readData(_publicKey, 15, &_keyA)) {
       _kapObjects->_led->off();
-      mfrc522.PICC_HaltA(); // Stop reading
       mfrc522.PCD_StopCrypto1();
+      mfrc522.PICC_HaltA(); // Stop reading
       mfrc522.PCD_Init();
+      delay(4);
       return;
     }
     Serial.println(hexArray("Public: ", _publicKey, KEY_LENGTH));
