@@ -20,6 +20,9 @@
 #include "KapLed.h"
 #include "KapConfigStruct.h"
 
+#define SECTOR_PRIV 14
+#define SECTOR_PUBL 15
+
 
 MFRC522 mfrc522(MFRC522_SS_PIN, MFRC522_RST_PIN);
 
@@ -38,9 +41,9 @@ KapCard::KapCard(KapObjects* kapObjects) {
     _keyD.keyByte[i] = 0xFF;
   }
 
-  _privateKey = new uint8_t[KEY_LENGTH + 2];
-  _publicKey = new uint8_t[KEY_LENGTH + 2];
-  _publicKeyEnc = new char[BASE64_LENGTH + 1];
+  _privateKey = new uint8_t[KEY_LENGTH + 2]; // 2 последних байта - crc
+  _publicKey = new uint8_t[KEY_LENGTH + 2]; // 2 последних байта - crc
+  _publicKeyEnc = new char[BASE64_LENGTH + 1]; // + окончание строки
   _signature = new uint8_t[SIGNATURE_LENGTH];
   _signatureEncoded = new char[SIGNATURE_ENC_LENGTH + 1];
   memset(_signatureEncoded, 0, SIGNATURE_ENC_LENGTH + 1);
@@ -159,7 +162,7 @@ void KapCard::process() {
   
   _kapObjects->_led->on();
 
-  if (!readData(_privateKey, 14, &_keyA)) {
+  if (!readData(_privateKey, SECTOR_PRIV, &_keyA)) {
     // Не удалось прочитать блоки с секретным ключом
     // Сбрасываю карту, чтоб читать с ключом по умолчанию
     mfrc522.PCD_StopCrypto1();
@@ -192,7 +195,7 @@ void KapCard::process() {
     }
   } else {
     // Serial.println(hexArray("Private: ", _privateKey, KEY_LENGTH));
-    if (!readData(_publicKey, 15, &_keyA)) {
+    if (!readData(_publicKey, SECTOR_PUBL, &_keyA)) {
       _kapObjects->_led->off();
       mfrc522.PCD_StopCrypto1();
       mfrc522.PICC_HaltA(); // Stop reading
@@ -378,16 +381,45 @@ bool KapCard::changeKeys(MFRC522::MIFARE_Key* oldKeyA, MFRC522::MIFARE_Key* oldK
 
 bool KapCard::writeKeys() {
   MFRC522::StatusCode status;
-  
-  if (!changeKeys(&_keyD, &_keyD, &_keyA, &_keyB, 14)) {
-    Serial.println(F("ERROR CHANGE RFID KEY 14"));
+
+  // Сначала проверить, что нет данных в перезаписываемых областях
+
+  memset(_privateKey, 0, KEY_LENGTH);
+  memset(_publicKey, 0, KEY_LENGTH);
+
+  bool readPriv = readData(_privateKey, SECTOR_PRIV, &_keyD);
+  bool readPubl = readData(_publicKey, SECTOR_PUBL, &_keyD);
+  if (!readPriv || !readPubl) {
+    Serial.println(F("ERROR READING CURRENT DATA AT REWRITABLE SECTORS"));
     mfrc522.PICC_HaltA();
     mfrc522.PCD_StopCrypto1();
     mfrc522.PCD_Init();
     return false;
   }
-  if (!changeKeys(&_keyD, &_keyD, &_keyA, &_keyB, 15)) {
-    Serial.println(F("ERROR CHANGE RFID KEY 15"));
+
+  for (int i = 0; i < KEY_LENGTH; i += 1) {
+    if (_publicKey[i] != 0 || _privateKey[i] != 0) {
+      Serial.println(F("REWRITABLE AREA IS NOT EMPTY"));
+      Serial.println(hexArray("PRIVATE: ", _privateKey, KEY_LENGTH));
+      Serial.println(hexArray("PUBLIC: ", _publicKey, KEY_LENGTH));
+      
+      mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
+      
+      return false;
+    }
+  }
+
+  
+  
+  if (!changeKeys(&_keyD, &_keyD, &_keyA, &_keyB, SECTOR_PRIV)) {
+    Serial.println(F("ERROR CHANGE RFID KEY SECTOR_PRIV"));
+    mfrc522.PICC_HaltA();
+    mfrc522.PCD_StopCrypto1();
+    mfrc522.PCD_Init();
+    return false;
+  }
+  if (!changeKeys(&_keyD, &_keyD, &_keyA, &_keyB, SECTOR_PUBL)) {
+    Serial.println(F("ERROR CHANGE RFID KEY SECTOR_PUBL"));
     mfrc522.PICC_HaltA();
     mfrc522.PCD_StopCrypto1();
     mfrc522.PCD_Init();
@@ -395,14 +427,12 @@ bool KapCard::writeKeys() {
     return false;
   }
 
-  uint8_t _priv[32];
-  uint8_t _publ[32];
   Ed25519::generatePrivateKey(_privateKey);
   Ed25519::derivePublicKey(_publicKey, _privateKey);
-  if (!writeKey(14, _privateKey)) {
+  if (!writeKey(SECTOR_PRIV, _privateKey)) {
     return false;
   }
-  if (!writeKey(15, _publicKey)) {
+  if (!writeKey(SECTOR_PUBL, _publicKey)) {
     return false;
   }
 
