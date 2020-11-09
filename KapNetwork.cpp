@@ -114,11 +114,14 @@ void KapNetwork::startStation(int waitSecs) {
 
   // Wait for connection
   int counter = 0;
-  while (WiFi.status() != WL_CONNECTED && counter < waitSecs) {
+  wl_status_t connStatus = WiFi.status();
+  
+  while ((connStatus = WiFi.status()) != WL_CONNECTED && counter < waitSecs) {
     delay(1000);
     Serial.print(".");
     counter += 1;
   }
+  
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\nConnected to " + String(conf->ssidName));
     Serial.print("IP address: ");
@@ -133,8 +136,15 @@ void KapNetwork::startStation(int waitSecs) {
     }
     Serial.print(getLocalTime());
     _kapObjects->_led->off();
+  } else if (connStatus == WL_CONNECT_FAILED) {
+    Serial.println("\nConnection failed");
+    startAP();
+  } else if (connStatus == WL_NO_SSID_AVAIL) {
+    Serial.println("\nNo SSID available");
+    startAP();
   } else {
     Serial.println("\nFailed to connect");
+    Serial.println(connStatus);
     _disconnectTime = millis();
   }
 }

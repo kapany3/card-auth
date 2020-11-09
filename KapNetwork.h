@@ -22,6 +22,7 @@ class KapNetwork
   private:
     unsigned long _disconnectTime = 0;
     int _apMode = WIFI_STA;
+    int _discCounter = 0;
     KapObjects* _kapObjects = NULL;
     DNSServer* _dns = NULL;
     
