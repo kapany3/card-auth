@@ -62,6 +62,7 @@ void KapServer::handleGetConfig() {
 
   doc["ssidName"] = conf->ssidName;
   doc["ssidPass"] = conf->ssidPass;
+  doc["apPass"] = conf->apPass;
   doc["serverAddr"] = conf->serverAddr;
   doc["serverPort"] = conf->serverPort;
   doc["serverUrl"] = conf->serverUrl;
@@ -90,6 +91,8 @@ void KapServer::handleSetConfig() {
       strlcpy(conf->ssidName, buf, sizeof(conf->ssidName));
     } else if (argName == "ssid_pass") {
       strlcpy(conf->ssidPass, buf, sizeof(conf->ssidPass));
+    } else if (argName == "ap_pass") {
+      strlcpy(conf->apPass, buf, sizeof(conf->apPass));
     } else if (argName == "serverAddr") {
       strlcpy(conf->serverAddr, buf, sizeof(conf->serverAddr));
     } else if (argName == "serverPort") {

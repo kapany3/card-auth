@@ -73,9 +73,15 @@ void KapNetwork::startAP() {
   } else {
     Serial.println("AP config FAILED");
   }
-  WiFi.softAP("CARDAUTH", "NEVALINK_5_nevalink");
+
+  char* apPass = _kapObjects->_config->getConfig()->apPass;
+  WiFi.softAP("CARDAUTH", apPass);
   _kapObjects->_server->serverBegin(true);
-  Serial.println("AP PARAMS:\nSSID: CARDAUTH\nPASS: NEVALINK_5_nevalink\nIP: 192.168.10.1");
+  Serial.println("AP PARAMS:");
+  Serial.println("SSID: CARDAUTH");
+  Serial.print("PASS: ");Serial.println(apPass);
+  Serial.println("IP: 192.168.10.1");
+
   if (_dns == NULL) {
     _dns = new DNSServer();
   }

@@ -7,6 +7,7 @@
 typedef struct {
   char ssidName[32] = "";
   char ssidPass[32] = "";
+  char apPass[32] = "";
   char serverAddr[64] = "";
   char serverUrl[64] = "";
   char serverPort[6] = "";

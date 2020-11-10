@@ -45,6 +45,9 @@ void KapConfig::loadConfig() {
   strlcpy(_configParams.ssidPass, doc["ssidPass"] | "", sizeof(_configParams.ssidPass));
   Serial.println("SSID PASS: " + String(_configParams.ssidPass));
   
+  strlcpy(_configParams.apPass, doc["apPass"] | "", sizeof(_configParams.apPass));
+  Serial.println("AP PASS: " + String(_configParams.apPass));
+  
   strlcpy(_configParams.serverAddr, doc["serverAddr"] | "", sizeof(_configParams.serverAddr));
   Serial.println("Server Addr: " + String(_configParams.serverAddr));
   
@@ -87,6 +90,7 @@ bool KapConfig::saveConfig() {
 
   doc["ssidName"] = _configParams.ssidName;
   doc["ssidPass"] = _configParams.ssidPass;
+  doc["apPass"] = _configParams.apPass;
   doc["serverAddr"] = _configParams.serverAddr;
   doc["serverPort"] = _configParams.serverPort;
   doc["serverUrl"] = _configParams.serverUrl;

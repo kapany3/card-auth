@@ -60,7 +60,7 @@ KapCard::KapCard(KapObjects* kapObjects) {
 
 bool KapCard::updateCounter(bool same) {
   unsigned long now = millis();
-  if (same && (now - _touchTime < 10000)) {
+  if (same && (now - _touchTime < 30000)) {
     _touchCountr += 1;
 
     Serial.print("Touch counter: ");
